@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全隐患管理后台 - 电务段</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f0f4f8;
+            color: #2c3e50;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a5276 0%, #2980b9 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-primary {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-primary:hover { background: #229954; }
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.3); }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .stat-card.pending .value { color: #e67e22; }
+        .stat-card.processing .value { color: #f39c12; }
+        .stat-card.done .value { color: #27ae60; }
+        .stat-card.total .value { color: #2980b9; }
+
+        .filter-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px 12px;
+            border: 1.5px solid #dce1e8;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fafbfc;
+            font-family: inherit;
+        }
+        .filter-bar input {
+            flex: 1;
+            min-width: 180px;
+        }
+        .filter-bar select {
+            min-width: 130px;
+        }
+
+        .table-wrapper {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #f8f9fa;
+        }
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #34495e;
+            border-bottom: 2px solid #ecf0f1;
+            white-space: nowrap;
+        }
+        td {
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: top;
+        }
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        .desc-cell {
+            max-width: 280px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-待处理 { background: #fdebd0; color: #e67e22; }
+        .status-处理中 { background: #fef9e7; color: #f39c12; }
+        .status-已处理 { background: #d5f5e3; color: #27ae60; }
+        .status-已关闭 { background: #e5e8eb; color: #7f8c8d; }
+
+        .photo-thumb {
+            width: 50px; height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .photo-thumb:hover { transform: scale(1.1); }
+        .photo-count {
+            display: inline-block;
+            background: #ecf0f1;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .actions-cell {
+            white-space: nowrap;
+        }
+        .actions-cell select {
+            padding: 4px 8px;
+            border: 1.5px solid #dce1e8;
+            border-radius: 5px;
+            font-size: 12px;
+            background: #fafbfc;
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show { display: flex; }
+        .modal img, .modal .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-gallery {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+        }
+        .modal-gallery h3 {
+            margin-bottom: 12px;
+            color: #2c3e50;
+        }
+        .modal-gallery .photos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .modal-gallery .photos img {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #95a5a6;
+        }
+        .empty-state .icon {
+            font-size: 60px;
+            margin-bottom: 16px;
+        }
+        .empty-state p {
+            font-size: 15px;
+        }
+
+        .storage-banner {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 14px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: pulse 2s infinite;
+        }
+        .storage-banner.critical {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        }
+        .storage-banner .icon {
+            font-size: 28px;
+        }
+        .storage-banner .msg {
+            flex: 1;
+            font-size: 14px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+
+        .storage-panel {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            border: 1px solid #e8ecf1;
+        }
+        .storage-panel h3 {
+            margin: 0 0 16px 0;
+            font-size: 16px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .storage-bar {
+            height: 24px;
+            background: #f0f4f8;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .storage-bar-fill {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+        .storage-bar-fill.warn {
+            background: linear-gradient(90deg, #f39c12, #f1c40f);
+        }
+        .storage-bar-fill.critical {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+        .storage-bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            text-shadow: 0 0 3px rgba(255,255,255,0.8);
+        }
+        .storage-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+        .storage-info span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .storage-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .storage-actions .btn {
+            font-size: 13px;
+            padding: 8px 14px;
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop.show {
+            display: flex;
+        }
+        .confirm-dialog {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .confirm-dialog h4 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+        .confirm-dialog p {
+            margin: 0 0 20px 0;
+            font-size: 14px;
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+        .confirm-dialog .dialog-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .clean-form {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .clean-form label {
+            font-size: 13px;
+            color: #555;
+        }
+        .clean-form select, .clean-form input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .filter-bar {
+                flex-direction: column;
+            }
+            .filter-bar input, .filter-bar select {
+                width: 100%;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 10px 8px;
+            }
+            .desc-cell {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ 安全隐患管理后台</h1>
+        <div class="header-actions">
+            <a href="/qrcode" class="btn btn-secondary">📱 二维码</a>
+            <a href="/" class="btn btn-secondary">🏠 上报页</a>
+            <a href="/api/export" class="btn btn-primary">📥 导出数据</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="storage-banner" id="storageBanner">
+            <span class="icon">⚠️</span>
+            <div class="msg" id="storageBannerMsg">存储空间即将耗尽，请尽快归档清理！</div>
+            <button class="btn btn-sm btn-danger" onclick="showStoragePanel()">立即处理</button>
+        </div>
+
+        <div class="storage-panel" id="storagePanel" style="display:none">
+            <h3>💾 存储空间管理</h3>
+            <div class="storage-bar">
+                <div class="storage-bar-fill" id="storageBarFill"></div>
+                <div class="storage-bar-text" id="storageBarText">加载中...</div>
+            </div>
+            <div class="storage-info">
+                <span>📦 已用: <strong id="storageUsed">0</strong> MB</span>
+                <span>🖼️ 照片: <strong id="photoCount">0</strong> 张</span>
+                <span>🗄️ 数据库: <strong id="dbSize">0</strong> MB</span>
+                <span>📊 上限: 512 MB</span>
+            </div>
+            <div class="storage-actions">
+                <a href="/api/archive" class="btn btn-primary">📦 一键归档（下载全部数据+照片）</a>
+                <button class="btn btn-secondary" onclick="showCleanDialog('timed')">🗑️ 清理旧记录</button>
+                <button class="btn btn-danger" onclick="showCleanDialog('photos')">⚠️ 仅清空照片（保留记录）</button>
+            </div>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="filter-bar">
+            <select id="statusFilter">
+                <option value="">全部状态</option>
+                <option value="待处理">待处理</option>
+                <option value="处理中">处理中</option>
+                <option value="已处理">已处理</option>
+                <option value="已关闭">已关闭</option>
+            </select>
+            <input type="text" id="keywordInput" placeholder="搜索位置/描述/上报人...">
+            <button class="btn btn-primary" onclick="loadIssues()">🔍 搜索</button>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>位置</th>
+                        <th>类型</th>
+                        <th>描述</th>
+                        <th>照片</th>
+                        <th>上报人</th>
+                        <th>状态</th>
+                        <th>上报时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="issueList">
+                    <tr><td colspan="9" class="empty-state"><div class="icon">📋</div><p>加载中...</p></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="imageModal">
+        <span class="modal-close" onclick="closeModal()">×</span>
+        <img id="modalImg" src="" alt="">
+    </div>
+
+    <div class="modal" id="galleryModal">
+        <span class="modal-close" onclick="closeGallery()">×</span>
+        <div class="modal-gallery">
+            <h3 id="galleryTitle">现场照片</h3>
+            <div class="photos" id="galleryPhotos"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="confirmDialog">
+        <div class="confirm-dialog">
+            <h4 id="dialogTitle">确认操作</h4>
+            <p id="dialogMsg">确定要执行此操作吗？</p>
+            <div id="cleanForm" style="display:none" class="clean-form">
+                <label>保留天数:
+                    <select id="cleanDays">
+                        <option value="7">7天以上</option>
+                        <option value="30" selected>30天以上</option>
+                        <option value="60">60天以上</option>
+                        <option value="90">90天以上</option>
+                    </select>
+                </label>
+                <label>状态:
+                    <select id="cleanStatus">
+                        <option value="">全部</option>
+                        <option value="已处理">已处理</option>
+                        <option value="已关闭">已关闭</option>
+                        <option value="处理中">处理中</option>
+                        <option value="待处理">待处理</option>
+                    </select>
+                </label>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-secondary" onclick="closeDialog()">取消</button>
+                <button class="btn btn-danger" id="dialogConfirmBtn" onclick="confirmDialogAction()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusLabels = ['待处理', '处理中', '已处理', '已关闭'];
+        let pendingAction = null;
+
+        async function loadIssues() {
+            const status = document.getElementById('statusFilter').value;
+            const keyword = document.getElementById('keywordInput').value;
+            const url = `/api/issues?status=${encodeURIComponent(status)}&keyword=${encodeURIComponent(keyword)}`;
+
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                renderList(data);
+                renderStats(data);
+            } catch (err) {
+                document.getElementById('issueList').innerHTML =
+                    '<tr><td colspan="9" class="empty-state"><div class="icon">❌</div><p>加载失败，请刷新重试</p></td></tr>';
+            }
+        }
+
+        function renderStats(issues) {
+            const total = issues.length;
+            const pending = issues.filter(i => i.status === '待处理').length;
+            const processing = issues.filter(i => i.status === '处理中').length;
+            const done = issues.filter(i => i.status === '已处理').length;
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card total">
+                    <div class="label">📊 隐患总数</div>
+                    <div class="value">${total}</div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="label">⏳ 待处理</div>
+                    <div class="value">${pending}</div>
+                </div>
+                <div class="stat-card processing">
+                    <div class="label">🔧 处理中</div>
+                    <div class="value">${processing}</div>
+                </div>
+                <div class="stat-card done">
+                    <div class="label">✅ 已处理</div>
+                    <div class="value">${done}</div>
+                </div>
+            `;
+        }
+
+        function renderList(issues) {
+            const tbody = document.getElementById('issueList');
+            if (!issues.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">📭</div><p>暂无隐患记录</p></td></tr>';
+                return;
+            }
+            tbody.innerHTML = issues.map(i => `
+                <tr>
+                    <td>#${i.id}</td>
+                    <td><strong>${escapeHtml(i.location)}</strong></td>
+                    <td>${escapeHtml(i.issue_type)}</td>
+                    <td class="desc-cell">${escapeHtml(i.description)}</td>
+                    <td>${i.photos.length ? `<span class="photo-count" onclick="showGallery(${i.id})">📷 ${i.photos.length}张</span>` : '-'}</td>
+                    <td>${escapeHtml(i.reporter || '匿名')}</td>
+                    <td><span class="status-badge status-${i.status}">${i.status}</span></td>
+                    <td style="white-space:nowrap">${formatTime(i.created_at)}</td>
+                    <td class="actions-cell">
+                        <select onchange="updateStatus(${i.id}, this.value)">
+                            ${statusLabels.map(s => `<option value="${s}" ${s === i.status ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-sm btn-danger" onclick="deleteIssue(${i.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        function formatTime(ts) {
+            if (!ts) return '-';
+            const d = new Date(ts);
+            return d.toLocaleString('zh-CN', { hour12: false });
+        }
+
+        async function updateStatus(id, status) {
+            try {
+                const resp = await fetch(`/api/issues/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (!resp.ok) throw new Error();
+            } catch (err) {
+                alert('状态更新失败');
+                loadIssues();
+            }
+        }
+
+        async function deleteIssue(id) {
+            if (!confirm('确定删除此隐患记录？此操作不可恢复！')) return;
+            try {
+                const resp = await fetch(`/api/issues/${id}`, { method: 'DELETE' });
+                if (resp.ok) loadIssues();
+            } catch (err) {
+                alert('删除失败');
+            }
+        }
+
+        function showGallery(issueId) {
+            fetch(`/api/issues`)
+                .then(r => r.json())
+                .then(issues => {
+                    const issue = issues.find(i => i.id === issueId);
+                    if (!issue || !issue.photos.length) return;
+                    document.getElementById('galleryTitle').textContent =
+                        `现场照片 - ${escapeHtml(issue.location)}`;
+                    document.getElementById('galleryPhotos').innerHTML =
+                        issue.photos.map(p => `<img src="/uploads/${p}" onclick="showImage('/uploads/${p}')">`).join('');
+                    document.getElementById('galleryModal').classList.add('show');
+                });
+        }
+
+        function closeGallery() {
+            document.getElementById('galleryModal').classList.remove('show');
+        }
+
+        function showImage(src) {
+            document.getElementById('modalImg').src = src;
+            document.getElementById('imageModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('show');
+        }
+
+        document.getElementById('keywordInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') loadIssues();
+        });
+        document.getElementById('statusFilter').addEventListener('change', loadIssues);
+
+        loadIssues();
+        loadStorageInfo();
+
+        async function loadStorageInfo() {
+            try {
+                const resp = await fetch('/api/storage');
+                const data = await resp.json();
+
+                const barFill = document.getElementById('storageBarFill');
+                const barText = document.getElementById('storageBarText');
+                barFill.style.width = Math.min(data.percent, 100) + '%';
+                barText.textContent = `${data.total_mb} MB / 512 MB (${data.percent}%)`;
+
+                barFill.classList.remove('warn', 'critical');
+                if (data.critical) barFill.classList.add('critical');
+                else if (data.warn) barFill.classList.add('warn');
+
+                document.getElementById('storageUsed').textContent = data.total_mb;
+                document.getElementById('photoCount').textContent = data.counts.photos;
+
+                const dbSize = await getDbSize();
+                document.getElementById('dbSize').textContent = dbSize;
+
+                const banner = document.getElementById('storageBanner');
+                if (data.warn || data.critical) {
+                    banner.style.display = 'flex';
+                    banner.classList.toggle('critical', data.critical);
+                    document.getElementById('storageBannerMsg').textContent =
+                        data.critical
+                            ? `⚠️ 存储空间已满（${data.percent}%）！请立即归档清理！`
+                            : `⚠️ 存储空间已使用 ${data.percent}%，建议尽快归档清理`;
+                } else {
+                    banner.style.display = 'none';
+                }
+            } catch (err) {}
+        }
+
+        async function getDbSize() {
+            try {
+                const resp = await fetch('/api/storage');
+                const data = await resp.json();
+                return data.counts.db > 0 ? '数据库' : '0';
+            } catch { return '-'; }
+        }
+
+        function showStoragePanel() {
+            const panel = document.getElementById('storagePanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            loadStorageInfo();
+        }
+
+        function showCleanDialog(type) {
+            const dialog = document.getElementById('confirmDialog');
+            const title = document.getElementById('dialogTitle');
+            const msg = document.getElementById('dialogMsg');
+            const cleanForm = document.getElementById('cleanForm');
+            const confirmBtn = document.getElementById('dialogConfirmBtn');
+
+            if (type === 'timed') {
+                pendingAction = 'clean_timed';
+                title.textContent = '🗑️ 清理旧记录';
+                msg.textContent = '将永久删除符合条件的隐患记录及其照片。建议先归档备份！';
+                cleanForm.style.display = 'flex';
+            } else if (type === 'photos') {
+                pendingAction = 'clean_all_photos';
+                title.textContent = '⚠️ 清空所有照片';
+                msg.textContent = '将删除所有隐患的现场照片（数据库中的文字记录保留）。建议先归档备份！';
+                cleanForm.style.display = 'none';
+            }
+
+            confirmBtn.className = 'btn ' + (type === 'photos' ? 'btn-danger' : 'btn-secondary');
+            dialog.classList.add('show');
+        }
+
+        function closeDialog() {
+            document.getElementById('confirmDialog').classList.remove('show');
+            pendingAction = null;
+        }
+
+        async function confirmDialogAction() {
+            if (!pendingAction) return;
+            let url = '', method = 'POST', body = null;
+
+            if (pendingAction === 'clean_timed') {
+                const days = parseInt(document.getElementById('cleanDays').value);
+                const status = document.getElementById('cleanStatus').value;
+                url = '/api/clean';
+                body = JSON.stringify({ days, status });
+            } else if (pendingAction === 'clean_all_photos') {
+                url = '/api/clean_all_photos';
+            }
+
+            try {
+                const resp = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert(`清理完成！\n删除记录: ${data.deleted_issues || 0} 条\n删除照片: ${data.deleted_photos || 0} 张\n剩余记录: ${data.remaining || 0} 条`);
+                    closeDialog();
+                    loadIssues();
+                    loadStorageInfo();
+                }
+            } catch (err) {
+                alert('操作失败，请重试');
+            }
+        }
+    </script>
+</body>
+</html>

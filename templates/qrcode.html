@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码生成 - 安全隐患上报</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #1a5276 0%, #2980b9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 36px 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 440px;
+            width: 100%;
+        }
+        .card h1 {
+            font-size: 22px;
+            color: #1a5276;
+            margin-bottom: 6px;
+        }
+        .card .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .url-display {
+            background: #f0f4f8;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            word-break: break-all;
+            border: 1px solid #dce1e8;
+        }
+        .qrcode-box {
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 20px;
+            border: 2px solid #ecf0f1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: white;
+            position: relative;
+        }
+        .qrcode-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .qrcode-loading {
+            position: absolute;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #2980b9;
+            color: white;
+        }
+        .btn-primary:hover { background: #2471a3; }
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+        .btn-secondary:hover { background: #d5dbdb; }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-success:hover { background: #229954; }
+        .divider {
+            height: 1px;
+            background: #ecf0f1;
+            margin: 20px 0;
+        }
+        .tips {
+            text-align: left;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-size: 13px;
+            color: #34495e;
+            line-height: 1.8;
+        }
+        .tips strong {
+            color: #1a5276;
+        }
+        .tips .step {
+            margin: 4px 0;
+        }
+        .back-link {
+            margin-top: 20px;
+        }
+        .back-link a {
+            color: #7f8c8d;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .back-link a:hover { color: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📱 安全隐患上报二维码</h1>
+        <div class="subtitle">扫码即可上报隐患 · 简单快捷</div>
+        <div class="url-display" id="urlDisplay">加载中...</div>
+        <div class="qrcode-box" id="qrcodeBox">
+            <div class="qrcode-loading">正在生成二维码...</div>
+        </div>
+        <div class="actions">
+            <button class="btn btn-primary" onclick="generateQR()">🔄 重新生成</button>
+            <button class="btn btn-success" onclick="downloadQR()">💾 下载二维码</button>
+        </div>
+        <div class="divider"></div>
+        <div class="tips">
+            <strong>📋 使用说明：</strong>
+            <div class="step">1. 使用手机微信/相机扫描上方二维码</div>
+            <div class="step">2. 点击右上角"···"选择在浏览器中打开</div>
+            <div class="step">3. 填写隐患信息并上传现场照片</div>
+            <div class="step">4. 点击提交即可完成上报</div>
+        </div>
+        <div class="back-link">
+            <a href="/admin">← 返回管理后台</a>
+        </div>
+    </div>
+
+    <script>
+        let currentQRPath = null;
+
+        async function generateQR() {
+            const box = document.getElementById('qrcodeBox');
+            box.innerHTML = '<div class="qrcode-loading">正在生成二维码...</div>';
+
+            try {
+                const resp = await fetch('/api/generate_qrcode');
+                const data = await resp.json();
+                if (data.success) {
+                    currentQRPath = data.qrcode_path;
+                    document.getElementById('urlDisplay').textContent = '上报地址：' + data.url;
+                    box.innerHTML = `<img src="${currentQRPath}?t=${Date.now()}" alt="安全隐患上报二维码">`;
+                }
+            } catch (err) {
+                box.innerHTML = '<div class="qrcode-loading">❌ 生成失败</div>';
+            }
+        }
+
+        function downloadQR() {
+            if (!currentQRPath) {
+                alert('请先生成二维码');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = currentQRPath;
+            link.download = '安全隐患上报二维码.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        generateQR();
+    </script>
+</body>
+</html>
