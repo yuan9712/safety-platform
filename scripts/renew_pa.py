@@ -3,12 +3,20 @@ import os
 import sys
 import datetime
 
-USERNAME = os.environ.get('PA_USERNAME', '')
-API_TOKEN = os.environ.get('PA_API_TOKEN', '')
-DOMAIN = os.environ.get('PA_DOMAIN', '')
+USERNAME = os.environ.get('PA_USERNAME', '').strip()
+API_TOKEN = os.environ.get('PA_API_TOKEN', '').strip()
+DOMAIN = os.environ.get('PA_DOMAIN', '').strip()
+
+print(f"[{datetime.datetime.now()}] PythonAnywhere 续期脚本启动")
+print(f"  PA_USERNAME: {'✅ 已设置' if USERNAME else '❌ 未设置'}")
+print(f"  PA_API_TOKEN: {'✅ 已设置' if API_TOKEN else '❌ 未设置'}")
+print(f"  PA_DOMAIN: {'✅ 已设置' if DOMAIN else '❌ 未设置'}")
 
 if not USERNAME or not API_TOKEN or not DOMAIN:
-    print("缺少必要环境变量: PA_USERNAME, PA_API_TOKEN, PA_DOMAIN")
+    print("\n❌ 缺少密钥！请到 GitHub 仓库 Settings → Secrets → Actions 添加：")
+    print("   PA_USERNAME = yuanpf")
+    print("   PA_API_TOKEN = 你的PythonAnywhere API Token")
+    print("   PA_DOMAIN = yuanpf.pythonanywhere.com")
     sys.exit(1)
 
 url = f'https://www.pythonanywhere.com/api/v1/user/webapps/{DOMAIN}/renew/'
@@ -17,20 +25,29 @@ headers = {
     'Content-Type': 'application/json'
 }
 
-print(f"[{datetime.datetime.now()}] 正在续期 PythonAnywhere 免费版...")
-print(f"  用户名: {USERNAME}")
-print(f"  域名: {DOMAIN}")
+print(f"\n正在请求: {url}")
 
 try:
     resp = requests.post(url, headers=headers, timeout=30)
+    print(f"响应状态码: {resp.status_code}")
+    print(f"响应内容: {resp.text}")
+
     if resp.status_code == 200:
-        print("✅ 续期成功！免费版已延长3个月。")
-    elif resp.status_code == 400:
-        print(f"⚠️ 请求被拒绝: {resp.text}")
-    else:
-        print(f"❌ 续期失败，状态码: {resp.status_code}")
-        print(f"  响应: {resp.text}")
+        print("\n✅ 续期成功！免费版已延长3个月。")
+    elif resp.status_code == 401:
+        print("\n❌ API Token 无效！请检查 Token 是否正确。")
         sys.exit(1)
+    elif resp.status_code == 404:
+        print("\n❌ 域名不存在！请检查 PA_DOMAIN 是否正确。")
+        sys.exit(1)
+    elif resp.status_code == 400:
+        print("\n⚠️ 请求被拒绝，可能已在有效期内，无需续期。")
+    else:
+        print(f"\n❌ 续期失败，状态码: {resp.status_code}")
+        sys.exit(1)
+except requests.exceptions.Timeout:
+    print("❌ 请求超时，请检查网络连接")
+    sys.exit(1)
 except Exception as e:
     print(f"❌ 请求异常: {e}")
     sys.exit(1)
