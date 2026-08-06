@@ -28,10 +28,11 @@ headers = {
 print(f"\n1. 查询 WebApp 信息...")
 try:
     resp = requests.get(
-        f'{BASE_URL}/api/v1/user/webapps/?domain={PA_DOMAIN}',
+        f'{BASE_URL}/api/v1/user/{PA_USERNAME}/webapps/',
         headers=headers,
         timeout=30
     )
+    print(f"   URL: {BASE_URL}/api/v1/user/{PA_USERNAME}/webapps/")
     print(f"   状态码: {resp.status_code}")
     
     if resp.status_code == 401:
@@ -46,13 +47,22 @@ try:
     
     data = resp.json()
     print(f"   响应类型: {type(data).__name__}")
+    print(f"   响应内容: {str(data)[:500]}")
     
-    if isinstance(data, list) and len(data) > 0:
-        webapp = data[0]
+    webapp = None
+    if isinstance(data, list):
+        for app in data:
+            if app.get('domain') == PA_DOMAIN or PA_DOMAIN in app.get('domain', ''):
+                webapp = app
+                break
+        if not webapp and len(data) > 0:
+            webapp = data[0]
+            print(f"   ⚠️ 未精确匹配域名，使用第一个 WebApp")
     elif isinstance(data, dict):
         webapp = data
-    else:
-        print(f"   ❌ 未找到 WebApp，返回: {data}")
+    
+    if not webapp:
+        print(f"   ❌ 未找到 WebApp")
         sys.exit(1)
         
     print(f"   域名: {webapp.get('domain')}")
