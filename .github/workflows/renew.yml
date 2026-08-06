@@ -1,4 +1,4 @@
-name: PythonAnywhere 自动续期
+name: PythonAnywhere 到期监控
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  renew:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
@@ -20,13 +20,13 @@ jobs:
       - name: 安装依赖
         run: pip install requests
 
-      - name: 执行续期
+      - name: 查询到期时间并告警
         env:
           PA_USERNAME: ${{ secrets.PA_USERNAME }}
           PA_API_TOKEN: ${{ secrets.PA_API_TOKEN }}
           PA_DOMAIN: ${{ secrets.PA_DOMAIN }}
-        run: python scripts/renew_pa.py
-
-      - name: 通知结果
-        if: always()
-        run: echo "续期任务完成 - $(date '+%Y-%m-%d %H:%M:%S')"
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          THRESHOLD_DAYS: ${{ secrets.THRESHOLD_DAYS || '7' }}
+          GITHUB_STEP_SUMMARY: ${{ github.step_summary }}
+        run: python scripts/check_pa.py
